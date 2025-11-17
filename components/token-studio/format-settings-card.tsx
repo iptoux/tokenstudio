@@ -38,7 +38,7 @@ export function FormatSettingsCard({
     <Card className="flex flex-col border-border/60">
       <CardHeader>
         <CardTitle>Format and Token Comparison</CardTitle>
-        <CardDescription>Compare the same payload as pretty JSON, minified JSON, YAML, and TOON.</CardDescription>
+        <CardDescription>Compare the same payload as pretty JSON, minified JSON, YAML, TOON, and TOML.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-6">
         {/* Feature Badges */}

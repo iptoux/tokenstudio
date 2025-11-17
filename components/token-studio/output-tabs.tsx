@@ -29,12 +29,13 @@ export function OutputTabs({
   onCopyOutput,
   onCopyTokenIds,
 }: OutputTabsProps) {
-  const formats: OutputFormat[] = ["pretty", "minified", "yaml", "toon"];
+  const formats: OutputFormat[] = ["pretty", "minified", "yaml", "toon", "toml"];
   const placeholders: Record<OutputFormat, string> = {
     pretty: "Pretty-printed JSON will appear here.",
     minified: "Minified JSON will appear here.",
     yaml: "YAML conversion will appear here.",
     toon: "Toon-encoded output will appear here.",
+    toml: "TOML conversion will appear here.",
   };
 
   return (
@@ -42,7 +43,7 @@ export function OutputTabs({
       <CardHeader>
         <CardTitle>Outputs</CardTitle>
         <CardDescription>
-          View your data across the four formats. All outputs are derived live from the input JSON.
+          View your data across the five formats. All outputs are derived live from the input JSON.
         </CardDescription>
       </CardHeader>
       <CardContent className="mt-1">
@@ -52,6 +53,7 @@ export function OutputTabs({
             <TabsTrigger value="minified">Minified JSON</TabsTrigger>
             <TabsTrigger value="yaml">YAML</TabsTrigger>
             <TabsTrigger value="toon">Toon</TabsTrigger>
+            <TabsTrigger value="toml">TOML</TabsTrigger>
           </TabsList>
 
           {formats.map((format) => (

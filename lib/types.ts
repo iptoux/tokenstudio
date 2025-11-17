@@ -26,7 +26,7 @@ export type SimpleToken = {
   end: number;
 };
 
-export type OutputFormat = "pretty" | "minified" | "yaml" | "toon";
+export type OutputFormat = "pretty" | "minified" | "yaml" | "toon" | "toml";
 
 export type TokenViewMode = "text" | "ids";
 

@@ -10,6 +10,7 @@ import { calculateCounts, approximateTokensFromText, simpleTokenize, getTokenIds
 import { jsonStringify } from "@/lib/utils/json";
 import { jsonToYamlLite } from "@/lib/utils/json";
 import { toToonEncoding } from "@/lib/utils/toon";
+import { jsonToToml } from "@/lib/utils/toml";
 import type { 
   EncodingFormat, 
   OutputFormat, 
@@ -38,6 +39,7 @@ export default function Home() {
     minified: "text",
     yaml: "text",
     toon: "text",
+    toml: "text",
   });
 
   const handleFileLoad = (file: File) => {
@@ -52,7 +54,7 @@ export default function Home() {
     }
   };
 
-  const { error, prettyJson, minifiedJson, yaml, toon } = useMemo(() => {
+  const { error, prettyJson, minifiedJson, yaml, toon, toml } = useMemo(() => {
     if (!input.trim()) {
       return {
         error: "",
@@ -60,6 +62,7 @@ export default function Home() {
         minifiedJson: "",
         yaml: "",
         toon: "",
+        toml: "",
       };
     }
 
@@ -69,6 +72,7 @@ export default function Home() {
       const minified = jsonStringify(parsed, showTokenAware);
       const yamlText = jsonToYamlLite(parsed, 0, showTokenAware);
       const toonText = toToonEncoding(parsed, toonDelimiter, toonKeyFolding);
+      const tomlText = jsonToToml(parsed);
 
       return {
         error: "",
@@ -76,6 +80,7 @@ export default function Home() {
         minifiedJson: minified,
         yaml: yamlText,
         toon: toonText,
+        toml: tomlText,
       };
     } catch (err) {
       return {
@@ -84,6 +89,7 @@ export default function Home() {
         minifiedJson: "",
         yaml: "",
         toon: "",
+        toml: "",
       };
     }
   }, [input, showTokenAware, toonDelimiter, toonKeyFolding]);
@@ -93,7 +99,8 @@ export default function Home() {
     minified: minifiedJson,
     yaml,
     toon,
-  }), [prettyJson, minifiedJson, yaml, toon]);
+    toml,
+  }), [prettyJson, minifiedJson, yaml, toon, toml]);
 
   const { exactTokens } = useTokenization({
     texts,
@@ -106,16 +113,19 @@ export default function Home() {
   const minifiedCounts = calculateCounts(minifiedJson);
   const yamlCounts = calculateCounts(yaml);
   const toonCounts = calculateCounts(toon);
+  const tomlCounts = calculateCounts(toml);
 
   const prettyTokenCount = approximateTokensFromText(prettyJson);
   const minifiedTokenCount = approximateTokensFromText(minifiedJson);
   const yamlTokenCount = approximateTokensFromText(yaml);
   const toonTokenCount = toon ? simpleTokenize(toon).filter((t) => t.id || t.text.trim()).length : 0;
+  const tomlTokenCount = approximateTokensFromText(toml);
 
   const prettyTokenCounts: TokenCounts = { ...prettyCounts, tokens: prettyTokenCount };
   const minifiedTokenCounts: TokenCounts = { ...minifiedCounts, tokens: minifiedTokenCount };
   const yamlTokenCounts: TokenCounts = { ...yamlCounts, tokens: yamlTokenCount };
   const toonTokenCounts: TokenCounts = { ...toonCounts, tokens: toonTokenCount };
+  const tomlTokenCounts: TokenCounts = { ...tomlCounts, tokens: tomlTokenCount };
 
   // Update token counts with exact tokens if available
   if (tokenizationModel === "cl100k_base") {
@@ -130,6 +140,9 @@ export default function Home() {
     }
     if (exactTokens.toon && exactTokens.toon.length > 0) {
       toonTokenCounts.tokens = exactTokens.toon.length;
+    }
+    if (exactTokens.toml && exactTokens.toml.length > 0) {
+      tomlTokenCounts.tokens = exactTokens.toml.length;
     }
   }
 
@@ -157,6 +170,7 @@ export default function Home() {
   const minifiedTokens = getTokensForFormat("minified");
   const yamlTokens = getTokensForFormat("yaml");
   const toonTokens = getTokensForFormat("toon");
+  const tomlTokens = getTokensForFormat("toml");
 
   // Update token counts from displayed tokens if available
   if (showTokens) {
@@ -175,6 +189,10 @@ export default function Home() {
     if (toonTokens) {
       toonTokenCounts.tokens = toonTokens.length;
     }
+    if (tomlTokens) {
+      const tokenIds = getTokenIds(tomlTokens);
+      tomlTokenCounts.tokens = tokenIds.length;
+    }
   }
 
   const getTokenIdsFor = (format: OutputFormat): number[] => {
@@ -185,7 +203,8 @@ export default function Home() {
     const tokens = format === "pretty" ? prettyTokens 
       : format === "minified" ? minifiedTokens
       : format === "yaml" ? yamlTokens
-      : toonTokens;
+      : format === "toon" ? toonTokens
+      : tomlTokens;
 
     if (!tokens) return [];
     return getTokenIds(tokens);
@@ -259,12 +278,14 @@ export default function Home() {
               minified: minifiedJson,
               yaml,
               toon,
+              toml,
             }}
             counts={{
               pretty: prettyTokenCounts,
               minified: minifiedTokenCounts,
               yaml: yamlTokenCounts,
               toon: toonTokenCounts,
+              toml: tomlTokenCounts,
             }}
             showCounts={showCounts}
             showTokens={showTokens}
@@ -276,6 +297,7 @@ export default function Home() {
               minified: minifiedTokens,
               yaml: yamlTokens,
               toon: toonTokens,
+              toml: tomlTokens,
             }}
             onCopyOutput={handleCopyOutput}
             onCopyTokenIds={handleCopyTokenIds}
