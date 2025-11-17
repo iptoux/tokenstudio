@@ -5,6 +5,7 @@ import { Header } from "@/components/token-studio/header";
 import { InputCard } from "@/components/token-studio/input-card";
 import { FormatSettingsCard } from "@/components/token-studio/format-settings-card";
 import { OutputTabs } from "@/components/token-studio/output-tabs";
+import { Footer } from "@/components/footer";
 import { useTokenization } from "@/hooks/use-tokenization";
 import { calculateCounts, approximateTokensFromText, simpleTokenize, getTokenIds } from "@/lib/utils/tokenization";
 import { jsonStringify } from "@/lib/utils/json";
@@ -25,7 +26,7 @@ import type {
 import type { TokenForDisplay, SimpleToken } from "@/lib/utils/tokenization";
 
 export default function Home() {
-  const [input, setInput] = useState<string>('{"hello": "world"}');
+  const [input, setInput] = useState<string>('');
   const [encodingFormat, setEncodingFormat] = useState<EncodingFormat>("base64");
   const [showCounts, setShowCounts] = useState<boolean>(true);
   const [showCopyReady, setShowCopyReady] = useState<boolean>(false);
@@ -271,39 +272,42 @@ export default function Home() {
           />
         </section>
 
-        <section>
-          <OutputTabs
-            outputs={{
-              pretty: prettyJson,
-              minified: minifiedJson,
-              yaml,
-              toon,
-              toml,
-            }}
-            counts={{
-              pretty: prettyTokenCounts,
-              minified: minifiedTokenCounts,
-              yaml: yamlTokenCounts,
-              toon: toonTokenCounts,
-              toml: tomlTokenCounts,
-            }}
-            showCounts={showCounts}
-            showTokens={showTokens}
-            showCopyReady={showCopyReady}
-            tokenViewPerTab={tokenViewPerTab}
-            onTokenViewPerTabChange={handleTokenViewPerTabChange}
-            tokens={{
-              pretty: prettyTokens,
-              minified: minifiedTokens,
-              yaml: yamlTokens,
-              toon: toonTokens,
-              toml: tomlTokens,
-            }}
-            onCopyOutput={handleCopyOutput}
-            onCopyTokenIds={handleCopyTokenIds}
-          />
-        </section>
+        {input.trim() && (
+          <section>
+            <OutputTabs
+              outputs={{
+                pretty: prettyJson,
+                minified: minifiedJson,
+                yaml,
+                toon,
+                toml,
+              }}
+              counts={{
+                pretty: prettyTokenCounts,
+                minified: minifiedTokenCounts,
+                yaml: yamlTokenCounts,
+                toon: toonTokenCounts,
+                toml: tomlTokenCounts,
+              }}
+              showCounts={showCounts}
+              showTokens={showTokens}
+              showCopyReady={showCopyReady}
+              tokenViewPerTab={tokenViewPerTab}
+              onTokenViewPerTabChange={handleTokenViewPerTabChange}
+              tokens={{
+                pretty: prettyTokens,
+                minified: minifiedTokens,
+                yaml: yamlTokens,
+                toon: toonTokens,
+                toml: tomlTokens,
+              }}
+              onCopyOutput={handleCopyOutput}
+              onCopyTokenIds={handleCopyTokenIds}
+            />
+          </section>
+        )}
       </main>
+      <Footer />
     </div>
   );
 }

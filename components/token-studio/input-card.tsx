@@ -50,7 +50,7 @@ export function InputCard({ input, onInputChange, error, onFileLoad }: InputCard
             onChange={(event) => onInputChange(event.target.value)}
             spellCheck={false}
             className="min-h-[220px] font-mono text-xs md:text-sm"
-            placeholder='Paste JSON or type { "users": [...] }'
+            placeholder='{"hello": "world"}'
           />
         </div>
         {error && (
