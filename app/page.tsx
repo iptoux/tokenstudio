@@ -72,7 +72,7 @@ export default function Home() {
       const minified = jsonStringify(parsed, showTokenAware);
       const yamlText = jsonToYamlLite(parsed, 0, showTokenAware);
       const toonText = toToonEncoding(parsed, toonDelimiter, toonKeyFolding);
-      const tomlText = jsonToToml(parsed);
+      const tomlText = jsonToToml(parsed, showTokenAware);
 
       return {
         error: "",
