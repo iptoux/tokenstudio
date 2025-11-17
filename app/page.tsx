@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { ButtonGroup, ButtonGroupText } from "@/components/ui/button-group";
 import { Badge } from "@/components/ui/badge";
 
 type EncodingFormat = "base64" | "hex" | "url-safe";
@@ -16,6 +18,10 @@ type EncodingFormat = "base64" | "hex" | "url-safe";
 type Counts = {
   chars: number;
   bytes: number;
+};
+
+type TokenCounts = Counts & {
+  tokens: number;
 };
 
 function calculateCounts(value: string): Counts {
@@ -27,6 +33,68 @@ function calculateCounts(value: string): Counts {
   const bytes = typeof window === "undefined" ? chars : new TextEncoder().encode(value).length;
 
   return { chars, bytes };
+}
+
+function approximateTokensFromText(text: string): number {
+  if (!text) return 0;
+  const bytes = typeof window === "undefined" ? text.length : new TextEncoder().encode(text).length;
+
+  // Very simple heuristic: tokens roughly equal bytes / 4 (approx for English/BPE tokens).
+  // This is intentionally approximate — it gives a helpful comparison across formats
+  // for the purpose of this tool without introducing a dependency on a tokenizer.
+  return Math.max(1, Math.ceil(bytes / 4));
+}
+
+function simpleTokenize(text: string) {
+  if (!text) return [];
+
+  // Fallback, approximate tokenizer: splits on whitespace and punctuation but preserves tokens and positions.
+  const regex = /\s+|[A-Za-z0-9_\-"'@]+|[^\sA-Za-z0-9_\-"'@]+/g;
+  const tokens: { id: number | null; text: string; start: number; end: number }[] = [];
+
+  const idMap = new Map<string, number>();
+  let nextId = 1;
+
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(text))) {
+    const tokenText = m[0];
+    if (/^\s+$/.test(tokenText)) {
+      tokens.push({ id: null, text: tokenText, start: m.index, end: m.index + tokenText.length });
+      continue;
+    }
+
+    if (!idMap.has(tokenText)) idMap.set(tokenText, nextId++);
+
+    tokens.push({ id: idMap.get(tokenText) ?? null, text: tokenText, start: m.index, end: m.index + tokenText.length });
+  }
+
+  return tokens;
+}
+
+function colorForTokenId(id?: number | null) {
+  if (!id) return "transparent";
+  const hue = (id * 47) % 360;
+  return `hsla(${hue} 90% 45% / 0.2)`;
+}
+
+function RenderHighlighted({ tokens }: { tokens: { id: number | null; text: string }[] }) {
+  return (
+    <>
+      {tokens.map((t, i) =>
+        t.id ? (
+          <span
+            key={i}
+            style={{ backgroundColor: colorForTokenId(t.id), borderRadius: 4 }}
+            className="px-[2px] py-[1px]"
+          >
+            {t.text}
+          </span>
+        ) : (
+          <span key={i}>{t.text}</span>
+        )
+      )}
+    </>
+  );
 }
 
 function jsonToYamlLite(value: unknown, indent = 0): string {
@@ -98,20 +166,19 @@ function encodeWithFormat(input: string, format: EncodingFormat): string {
   }
 }
 
-function toToonEncoding(minifiedJson: string, format: EncodingFormat, strength: number): string {
-  const encoded = encodeWithFormat(minifiedJson, format);
+import { encode as encodeToon } from "@toon-format/toon";
 
-  if (!encoded) return "";
-
-  const clampedStrength = Math.min(Math.max(strength, 1), 5);
-  const chunkSize = clampedStrength * 4;
-
-  const chunks: string[] = [];
-  for (let i = 0; i < encoded.length; i += chunkSize) {
-    chunks.push(encoded.slice(i, i + chunkSize));
+/**
+ * Encode parsed JSON as TOON using the official library.
+ */
+function toToonEncoding(parsed: unknown, delimiter: "," | "\t" | "|" = ",", keyFolding: "off" | "safe" = "off") {
+  try {
+    const encoded = encodeToon(parsed, { delimiter, keyFolding });
+    return encoded || "";
+  } catch (err) {
+    // Fallback to an empty string on error so the UI shows a parse error instead
+    return "";
   }
-
-  return chunks.join(" ");
 }
 
 export default function Home() {
@@ -119,6 +186,16 @@ export default function Home() {
   const [encodingFormat, setEncodingFormat] = useState<EncodingFormat>("base64");
   const [encodingStrength, setEncodingStrength] = useState<number>(2);
   const [showCounts, setShowCounts] = useState<boolean>(true);
+  const [toonDelimiter, setToonDelimiter] = useState<"," | "\t" | "|">(",");
+  const [toonKeyFolding, setToonKeyFolding] = useState<'off' | 'safe'>('off');
+  const [showTokens, setShowTokens] = useState<boolean>(false);
+  const [tokenizationModel, setTokenizationModel] = useState<string>("cl100k_base");
+  const [tokenViewPerTab, setTokenViewPerTab] = useState<Record<string, "text" | "ids">>({
+    pretty: "text",
+    minified: "text",
+    yaml: "text",
+    toon: "text",
+  });
 
   const { error, prettyJson, minifiedJson, yaml, toon } = useMemo(() => {
     if (!input.trim()) {
@@ -137,12 +214,14 @@ export default function Home() {
       const minified = JSON.stringify(parsed);
       const yamlText = jsonToYamlLite(parsed);
 
+      const toonText = toToonEncoding(parsed, toonDelimiter, toonKeyFolding);
+
       return {
         error: "",
         prettyJson: pretty,
         minifiedJson: minified,
         yaml: yamlText,
-        toon: toToonEncoding(minified, encodingFormat, encodingStrength),
+        toon: toonText,
       };
     } catch (err) {
       return {
@@ -159,6 +238,30 @@ export default function Home() {
   const minifiedCounts = calculateCounts(minifiedJson);
   const yamlCounts = calculateCounts(yaml);
   const toonCounts = calculateCounts(toon);
+
+  const prettyTokenCount = approximateTokensFromText(prettyJson);
+  const minifiedTokenCount = approximateTokensFromText(minifiedJson);
+  const yamlTokenCount = approximateTokensFromText(yaml);
+  // For toon we can be more precise: tokens are the chunked groups in the toon output
+  const toonTokenCount = toon ? simpleTokenize(toon).filter((t) => t.id || t.text.trim()).length : 0;
+
+  const prettyTokenCounts: TokenCounts = { ...prettyCounts, tokens: prettyTokenCount };
+  const minifiedTokenCounts: TokenCounts = { ...minifiedCounts, tokens: minifiedTokenCount };
+  const yamlTokenCounts: TokenCounts = { ...yamlCounts, tokens: yamlTokenCount };
+  const toonTokenCounts: TokenCounts = { ...toonCounts, tokens: toonTokenCount };
+
+  // tokenized breakdown for highlighting / ids — computed lazily when tokens are enabled
+  const prettyTokens = showTokens ? simpleTokenize(prettyJson) : undefined;
+  const minifiedTokens = showTokens ? simpleTokenize(minifiedJson) : undefined;
+  const yamlTokens = showTokens ? simpleTokenize(yaml) : undefined;
+  const toonTokens = showTokens ? (toon ? simpleTokenize(toon).map((t) => ({ id: t.id ?? undefined, text: t.text })) : []) : undefined;
+
+  if (showTokens) {
+    if (prettyTokens) prettyTokenCounts.tokens = prettyTokens.filter((t) => t.id).length;
+    if (minifiedTokens) minifiedTokenCounts.tokens = (minifiedTokens as any[]).filter((t) => t.id).length;
+    if (yamlTokens) yamlTokenCounts.tokens = (yamlTokens as any[]).filter((t) => t.id).length;
+    if (toonTokens) toonTokenCounts.tokens = (toonTokens as any[]).length;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/40">
@@ -232,6 +335,33 @@ export default function Home() {
                 </p>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="toon-delimiter">TOON delimiter</Label>
+                <Select value={toonDelimiter} onValueChange={(v) => setToonDelimiter(v as any)}>
+                  <SelectTrigger id="toon-delimiter">
+                    <SelectValue placeholder="TOON delimiter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="," defaultChecked>Comma (default)</SelectItem>
+                    <SelectItem value="\t">Tab</SelectItem>
+                    <SelectItem value="|">Pipe</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="toon-keyfold">Key folding</Label>
+                  <Select value={toonKeyFolding} onValueChange={(v) => setToonKeyFolding(v as any)}>
+                    <SelectTrigger id="toon-keyfold">
+                      <SelectValue placeholder="Key folding" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="off">off</SelectItem>
+                      <SelectItem value="safe">safe</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-xs text-muted-foreground">TOON (Token-Oriented Object Notation) is a compact format designed for LLM inputs. See the spec for details.</p>
+              </div>
+
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <Label htmlFor="encoding-strength">Encoding strength</Label>
@@ -265,6 +395,26 @@ export default function Home() {
                   onCheckedChange={setShowCounts}
                 />
               </div>
+
+              <div className="flex items-center justify-between gap-4 rounded-md border border-border/60 bg-muted/40 px-3 py-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="show-tokens">Show tokens</Label>
+                  <p className="text-xs text-muted-foreground">Enable token highlighting & token IDs</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Select value={tokenizationModel} onValueChange={(v) => setTokenizationModel(v)}>
+                    <SelectTrigger id="tokenization-model">
+                      <SelectValue placeholder="Select tokenizer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cl100k_base">cl100k_base</SelectItem>
+                      <SelectItem value="gpt2">gpt2</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Switch id="show-tokens" checked={showTokens} onCheckedChange={setShowTokens} />
+                </div>
+              </div>
             </CardContent>
           </Card>
         </section>
@@ -288,49 +438,147 @@ export default function Home() {
 
                 <TabsContent value="pretty" className="space-y-2">
                   {showCounts && (
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                      <span>Characters: {prettyCounts.chars}</span>
-                      <span>Bytes: {prettyCounts.bytes}</span>
-                    </div>
-                  )}
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="rounded-md border border-border/60 bg-muted p-2 text-xs text-muted-foreground">
+                          <div className="font-medium">Tokens</div>
+                          <div className="tabular-nums">{prettyTokenCounts.tokens}</div>
+                        </div>
+
+                        <div className="rounded-md border border-border/60 bg-muted p-2 text-xs text-muted-foreground">
+                          <div className="font-medium">Characters</div>
+                          <div className="tabular-nums">{prettyTokenCounts.chars}</div>
+                        </div>
+
+                        <div className="rounded-md border border-border/60 bg-muted p-2 text-xs text-muted-foreground">
+                          <div className="font-medium">Bytes</div>
+                          <div className="tabular-nums">{prettyTokenCounts.bytes}</div>
+                        </div>
+                      </div>
+                    )}
+                    {showTokens && (
+                      <div className="flex justify-between items-center">
+                        <ButtonGroup>
+                          <Button
+                              variant={tokenViewPerTab.pretty === "text" ? "default" : "outline"}
+                              onClick={() => setTokenViewPerTab({ ...tokenViewPerTab, pretty: "text" })}
+                            >
+                            Text
+                          </Button>
+                          <Button
+                            variant={tokenViewPerTab.pretty === "ids" ? "default" : "outline"}
+                            onClick={() => setTokenViewPerTab({ ...tokenViewPerTab, pretty: "ids" })}
+                          >
+                            Token IDs
+                          </Button>
+                        </ButtonGroup>
+                      </div>
+                    )}
                   <pre className="max-h-[360px] overflow-auto rounded-md bg-muted px-3 py-2 text-xs leading-relaxed md:text-sm">
-                    <code>{prettyJson || "Pretty-printed JSON will appear here."}</code>
+                    <code>
+                      {showTokens && tokenViewPerTab.pretty === "text" && prettyTokens ? (
+                        <RenderHighlighted tokens={prettyTokens as any} />
+                      ) : showTokens && tokenViewPerTab.pretty === "ids" && prettyTokens ? (
+                        JSON.stringify((prettyTokens as any[]).map((t) => t.id).filter(Boolean))
+                      ) : (
+                        prettyJson || "Pretty-printed JSON will appear here."
+                      )}
+                    </code>
                   </pre>
                 </TabsContent>
 
                 <TabsContent value="minified" className="space-y-2">
                   {showCounts && (
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                      <span>Characters: {minifiedCounts.chars}</span>
-                      <span>Bytes: {minifiedCounts.bytes}</span>
-                    </div>
-                  )}
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="rounded-md border border-border/60 bg-muted p-2 text-xs text-muted-foreground">
+                          <div className="font-medium">Tokens</div>
+                          <div className="tabular-nums">{minifiedTokenCounts.tokens}</div>
+                        </div>
+
+                        <div className="rounded-md border border-border/60 bg-muted p-2 text-xs text-muted-foreground">
+                          <div className="font-medium">Characters</div>
+                          <div className="tabular-nums">{minifiedTokenCounts.chars}</div>
+                        </div>
+
+                        <div className="rounded-md border border-border/60 bg-muted p-2 text-xs text-muted-foreground">
+                          <div className="font-medium">Bytes</div>
+                          <div className="tabular-nums">{minifiedTokenCounts.bytes}</div>
+                        </div>
+                      </div>
+                    )}
                   <pre className="max-h-[360px] overflow-auto rounded-md bg-muted px-3 py-2 text-xs leading-relaxed md:text-sm">
-                    <code>{minifiedJson || "Minified JSON will appear here."}</code>
+                    <code>
+                      {showTokens && tokenViewPerTab.minified === "text" && minifiedTokens ? (
+                        <RenderHighlighted tokens={minifiedTokens as any} />
+                      ) : showTokens && tokenViewPerTab.minified === "ids" && minifiedTokens ? (
+                        JSON.stringify((minifiedTokens as any[]).map((t) => t.id).filter(Boolean))
+                      ) : (
+                        minifiedJson || "Minified JSON will appear here."
+                      )}
+                    </code>
                   </pre>
                 </TabsContent>
 
                 <TabsContent value="yaml" className="space-y-2">
                   {showCounts && (
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                      <span>Characters: {yamlCounts.chars}</span>
-                      <span>Bytes: {yamlCounts.bytes}</span>
-                    </div>
-                  )}
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="rounded-md border border-border/60 bg-muted p-2 text-xs text-muted-foreground">
+                          <div className="font-medium">Tokens</div>
+                          <div className="tabular-nums">{yamlTokenCounts.tokens}</div>
+                        </div>
+
+                        <div className="rounded-md border border-border/60 bg-muted p-2 text-xs text-muted-foreground">
+                          <div className="font-medium">Characters</div>
+                          <div className="tabular-nums">{yamlTokenCounts.chars}</div>
+                        </div>
+
+                        <div className="rounded-md border border-border/60 bg-muted p-2 text-xs text-muted-foreground">
+                          <div className="font-medium">Bytes</div>
+                          <div className="tabular-nums">{yamlTokenCounts.bytes}</div>
+                        </div>
+                      </div>
+                    )}
                   <pre className="max-h-[360px] overflow-auto rounded-md bg-muted px-3 py-2 text-xs leading-relaxed md:text-sm">
-                    <code>{yaml || "YAML conversion will appear here."}</code>
+                    <code>
+                      {showTokens && tokenViewPerTab.yaml === "text" && yamlTokens ? (
+                        <RenderHighlighted tokens={yamlTokens as any} />
+                      ) : showTokens && tokenViewPerTab.yaml === "ids" && yamlTokens ? (
+                        JSON.stringify((yamlTokens as any[]).map((t) => t.id).filter(Boolean))
+                      ) : (
+                        yaml || "YAML conversion will appear here."
+                      )}
+                    </code>
                   </pre>
                 </TabsContent>
 
                 <TabsContent value="toon" className="space-y-2">
                   {showCounts && (
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                      <span>Characters: {toonCounts.chars}</span>
-                      <span>Bytes: {toonCounts.bytes}</span>
-                    </div>
-                  )}
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="rounded-md border border-border/60 bg-muted p-2 text-xs text-muted-foreground">
+                          <div className="font-medium">Tokens</div>
+                          <div className="tabular-nums">{toonTokenCounts.tokens}</div>
+                        </div>
+
+                        <div className="rounded-md border border-border/60 bg-muted p-2 text-xs text-muted-foreground">
+                          <div className="font-medium">Characters</div>
+                          <div className="tabular-nums">{toonTokenCounts.chars}</div>
+                        </div>
+
+                        <div className="rounded-md border border-border/60 bg-muted p-2 text-xs text-muted-foreground">
+                          <div className="font-medium">Bytes</div>
+                          <div className="tabular-nums">{toonTokenCounts.bytes}</div>
+                        </div>
+                      </div>
+                    )}
                   <pre className="max-h-[360px] overflow-auto rounded-md bg-muted px-3 py-2 text-xs leading-relaxed md:text-sm">
-                    <code>{toon || "Toon-encoded output will appear here."}</code>
+                    <code>
+                      {showTokens && tokenViewPerTab.toon === "text" && toonTokens ? (
+                        <RenderHighlighted tokens={(toonTokens as any[]).map((t) => ({ id: t.id, text: t.text }))} />
+                      ) : showTokens && tokenViewPerTab.toon === "ids" && toonTokens ? (
+                        JSON.stringify((toonTokens as any[]).map((t) => t.id))
+                      ) : (
+                        toon || "Toon-encoded output will appear here."
+                      )}
+                    </code>
                   </pre>
                 </TabsContent>
               </Tabs>
