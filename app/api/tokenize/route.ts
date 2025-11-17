@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { get_encoding } from "@dqbd/tiktoken";
 
 export const runtime = "nodejs";
 
@@ -42,29 +41,41 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Unsupported model: ${model}` }, { status: 400 });
   }
 
-  const encoding = get_encoding("cl100k_base");
-  const decoder = new TextDecoder();
-
-  const resultTokens: Record<string, Token[]> = {};
-
   try {
-    for (const [key, text] of Object.entries(texts)) {
-      if (!text) {
-        resultTokens[key] = [];
-        continue;
+    // Dynamically import to ensure WASM is loaded properly
+    const { get_encoding } = await import("@dqbd/tiktoken");
+    const encoding = get_encoding("cl100k_base");
+    const decoder = new TextDecoder();
+
+    const resultTokens: Record<string, Token[]> = {};
+
+    try {
+      for (const [key, text] of Object.entries(texts)) {
+        if (!text) {
+          resultTokens[key] = [];
+          continue;
+        }
+
+        const ids = encoding.encode(text);
+        const tokens: Token[] = Array.from(ids).map((id) => {
+          const bytes = encoding.decode_single_token_bytes(id);
+          const tokenText = decoder.decode(bytes);
+          return { id, text: tokenText };
+        });
+
+        resultTokens[key] = tokens;
       }
-
-      const ids = encoding.encode(text);
-      const tokens: Token[] = ids.map((id) => {
-        const bytes = encoding.decode_single_token_bytes(id);
-        const tokenText = decoder.decode(bytes);
-        return { id, text: tokenText };
-      });
-
-      resultTokens[key] = tokens;
+    } finally {
+      encoding.free();
     }
+
+    const response: TokenizeResponseBody = {
+      model,
+      tokens: resultTokens,
+    };
+
+    return NextResponse.json(response);
   } catch (err) {
-    encoding.free();
     return NextResponse.json(
       {
         error: err instanceof Error ? err.message : "Tokenization failed",
@@ -72,14 +83,5 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-
-  encoding.free();
-
-  const response: TokenizeResponseBody = {
-    model,
-    tokens: resultTokens,
-  };
-
-  return NextResponse.json(response);
 }
 

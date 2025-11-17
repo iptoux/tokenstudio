@@ -22,13 +22,13 @@ export function jsonToToml(parsed: unknown, tokenAware = false): string {
     
     // @iarna/toml expects a plain object, so we ensure it's a valid TOML structure
     if (parsed === null || typeof parsed !== "object") {
-      tomlOutput = stringify({ value: parsed });
+      tomlOutput = stringify({ value: parsed } as any);
     } else if (Array.isArray(parsed)) {
       // TOML doesn't support top-level arrays well, so we wrap it
-      tomlOutput = stringify({ array: parsed });
+      tomlOutput = stringify({ array: parsed } as any);
     } else {
       // For objects, we can directly stringify
-      tomlOutput = stringify(parsed as Record<string, unknown>);
+      tomlOutput = stringify(parsed as any);
     }
 
     // Post-process to remove quotes from simple strings if token-aware is enabled
