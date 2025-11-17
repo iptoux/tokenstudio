@@ -17,6 +17,7 @@ export function InputCard({ input, onInputChange, error, onFileLoad }: InputCard
 
   const handleFileSelect = (file: File | null) => {
     if (file && file.type === "application/json") {
+      onFileLoad(file);
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result && typeof event.target.result === "string") {
@@ -49,7 +50,7 @@ export function InputCard({ input, onInputChange, error, onFileLoad }: InputCard
             value={input}
             onChange={(event) => onInputChange(event.target.value)}
             spellCheck={false}
-            className="min-h-[220px] font-mono text-xs md:text-sm"
+            className="min-h-[240px] font-mono text-xs md:text-sm"
             placeholder='{"hello": "world"}'
           />
         </div>
