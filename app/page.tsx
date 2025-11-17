@@ -103,11 +103,15 @@ function RenderHighlighted({ tokens }: { tokens: { id: number | null; text: stri
   );
 }
 
-function jsonToYamlLite(value: unknown, indent = 0): string {
+function jsonToYamlLite(value: unknown, indent = 0, tokenAware = false): string {
   const space = "  ".repeat(indent);
 
   if (value === null || typeof value !== "object") {
     if (typeof value === "string") {
+      // Token-aware formatting: omit quotes for simple, safe strings
+      if (tokenAware && /^[a-zA-Z0-9_-]+$/.test(value) && !isReservedYamlWord(value)) {
+        return value;
+      }
       return JSON.stringify(value);
     }
     return String(value);
@@ -120,7 +124,7 @@ function jsonToYamlLite(value: unknown, indent = 0): string {
 
     return value
       .map((item) => {
-        const nested = jsonToYamlLite(item, indent + 1);
+        const nested = jsonToYamlLite(item, indent + 1, tokenAware);
         if (typeof item === "object" && item !== null && nested.includes("\n")) {
           return `${space}- ${nested.split("\n")[0]}\n${nested
             .split("\n")
@@ -141,7 +145,7 @@ function jsonToYamlLite(value: unknown, indent = 0): string {
 
   return entries
     .map(([key, val]) => {
-      const nested = jsonToYamlLite(val, indent + 1);
+      const nested = jsonToYamlLite(val, indent + 1, tokenAware);
       if (val !== null && typeof val === "object") {
         return `${space}${key}:\n${"  ".repeat(indent + 1)}${nested.replace(/\n/g, `\n${"  ".repeat(indent + 1)}`)}`;
       }
@@ -149,6 +153,27 @@ function jsonToYamlLite(value: unknown, indent = 0): string {
       return `${space}${key}: ${nested}`;
     })
     .join("\n");
+}
+
+function isReservedYamlWord(word: string): boolean {
+  const reserved = ['true', 'false', 'null', 'yes', 'no', 'on', 'off', 'true', '~'];
+  return reserved.includes(word.toLowerCase());
+}
+
+function jsonStringify(value: unknown, tokenAware = false, indent?: number | string): string {
+  if (!tokenAware) {
+    return JSON.stringify(value, null, indent);
+  }
+
+  return JSON.stringify(value, (key, val) => {
+    // For strings, omit quotes if safe and token-aware is enabled
+    if (typeof val === "string" && /^[a-zA-Z0-9_-]+$/.test(val) && !isReservedYamlWord(val)) {
+      // Return a special marker that we'll handle in postprocessing
+      return `__UNQUOTED__${val}__`;
+    }
+    return val;
+  }, indent)
+    .replace(/\"__UNQUOTED__(.+?)__\"/g, '$1'); // Remove quotes from marked strings
 }
 
 function encodeWithFormat(input: string, format: EncodingFormat): string {
@@ -196,6 +221,7 @@ export default function Home() {
   const [toonDelimiter, setToonDelimiter] = useState<"," | "\t" | "|">(",");
   const [toonKeyFolding, setToonKeyFolding] = useState<'off' | 'safe'>('off');
   const [showTokens, setShowTokens] = useState<boolean>(false);
+  const [showTokenAware, setShowTokenAware] = useState<boolean>(false);
   const [tokenizationModel, setTokenizationModel] = useState<string>("cl100k_base");
   const [tokenViewPerTab, setTokenViewPerTab] = useState<Record<string, "text" | "ids">>({
     pretty: "text",
@@ -220,9 +246,9 @@ export default function Home() {
 
     try {
       const parsed = JSON.parse(input);
-      const pretty = JSON.stringify(parsed, null, 2);
-      const minified = JSON.stringify(parsed);
-      const yamlText = jsonToYamlLite(parsed);
+      const pretty = jsonStringify(parsed, showTokenAware, 2);
+      const minified = jsonStringify(parsed, showTokenAware);
+      const yamlText = jsonToYamlLite(parsed, 0, showTokenAware);
 
       const toonText = toToonEncoding(parsed, toonDelimiter, toonKeyFolding);
 
@@ -242,7 +268,7 @@ export default function Home() {
         toon: "",
       };
     }
-  }, [input, encodingFormat, encodingStrength]);
+  }, [input, encodingFormat, encodingStrength, showTokenAware]);
 
   const prettyCounts = calculateCounts(prettyJson);
   const minifiedCounts = calculateCounts(minifiedJson);
@@ -526,9 +552,9 @@ export default function Home() {
               {/* Feature Badges */}
               <div className="flex flex-wrap gap-2">
                 <Badge 
-                  variant={showTokens ? "default" : "outline"}
+                  variant={showTokenAware ? "default" : "outline"}
                   className="cursor-pointer"
-                  onClick={() => setShowTokens(!showTokens)}
+                  onClick={() => setShowTokenAware(!showTokenAware)}
                 >
                   Token aware
                 </Badge>
@@ -545,6 +571,13 @@ export default function Home() {
                   onClick={() => setShowCounts(!showCounts)}
                 >
                   Character and byte counts
+                </Badge>
+                <Badge 
+                  variant={showTokens ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => setShowTokens(!showTokens)}
+                >
+                  Show tokens
                 </Badge>
               </div>
 
@@ -565,11 +598,6 @@ export default function Home() {
                       <SelectItem value="url-safe">url-safe</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-
-                <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/40 px-3 py-2">
-                  <Label htmlFor="show-tokens" className="text-xs">Show tokens</Label>
-                  <Switch id="show-tokens" checked={showTokens} onCheckedChange={setShowTokens} />
                 </div>
               </div>
             </CardContent>
