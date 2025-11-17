@@ -6,6 +6,7 @@ import { useTheme } from "next-themes";
 import { Moon, Sun, Github } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
+import { Badge } from "../ui/badge";
 
 export function Navbar() {
   const { theme, setTheme } = useTheme();
@@ -33,16 +34,25 @@ export function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 w-full max-w-6xl mx-auto border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-b-lg">
-      <div className="container flex h-16 items-center justify-between px-4">
+      <div className="container flex h-32 items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-3">
           <Image
             src="/tokenstudio-logo.png"
             alt="Token Studio Logo"
-            width={32}
-            height={32}
-            className="h-8 w-8"
+            width={116}
+            height={116}
           />
-          <span className="text-lg font-semibold">Token Studio</span>
+          <div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline">• TOKEN STUDIO</Badge>
+        </div>
+        <h1 className="mt-2 text-balance text-2xl font-semibold tracking-tight sm:text-3xl">
+          JSON to YAML to TOON
+        </h1>
+        <p className="mt-1 max-w-xl text-sm text-muted-foreground sm:text-base">
+          Paste JSON, explore alternate formats, and see how token counts change for different encodings.
+        </p>
+      </div>
         </Link>
 
         <div className="flex items-center gap-2">

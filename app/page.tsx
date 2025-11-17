@@ -1,11 +1,9 @@
 'use client';
 
 import { useMemo, useState } from "react";
-import { Header } from "@/components/token-studio/header";
 import { InputCard } from "@/components/token-studio/input-card";
 import { FormatSettingsCard } from "@/components/token-studio/format-settings-card";
 import { OutputTabs } from "@/components/token-studio/output-tabs";
-import { Footer } from "@/components/footer";
 import { useTokenization } from "@/hooks/use-tokenization";
 import { calculateCounts, approximateTokensFromText, simpleTokenize, getTokenIds } from "@/lib/utils/tokenization";
 import { jsonStringify } from "@/lib/utils/json";
@@ -21,20 +19,19 @@ import type {
   ToonDelimiter, 
   ToonKeyFolding,
   TokenizationModel,
-  Token
 } from "@/lib/types";
-import type { TokenForDisplay, SimpleToken } from "@/lib/utils/tokenization";
+import type { TokenForDisplay} from "@/lib/utils/tokenization";
 
 export default function Home() {
   const [input, setInput] = useState<string>('');
   const [encodingFormat, setEncodingFormat] = useState<EncodingFormat>("base64");
   const [showCounts, setShowCounts] = useState<boolean>(true);
   const [showCopyReady, setShowCopyReady] = useState<boolean>(false);
-  const [toonDelimiter, setToonDelimiter] = useState<ToonDelimiter>(",");
-  const [toonKeyFolding, setToonKeyFolding] = useState<ToonKeyFolding>('off');
+  const [toonDelimiter] = useState<ToonDelimiter>(",");
+  const [toonKeyFolding] = useState<ToonKeyFolding>('off');
   const [showTokens, setShowTokens] = useState<boolean>(false);
   const [showTokenAware, setShowTokenAware] = useState<boolean>(false);
-  const [tokenizationModel, setTokenizationModel] = useState<TokenizationModel>("cl100k_base");
+  const [tokenizationModel] = useState<TokenizationModel>("cl100k_base");
   const [tokenViewPerTab, setTokenViewPerTab] = useState<TokenViewPerTab>({
     pretty: "text",
     minified: "text",
@@ -245,9 +242,8 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/40">
-      <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-8 px-4 py-10 md:px-8 lg:py-16">
-        <Header />
+    <div className="min-h-fit bg-gradient-to-b from-background to-muted/40">
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10 md:px-8 lg:py-16">
 
         <section className="grid flex-1 gap-6 lg:grid-cols-2">
           <InputCard
@@ -307,7 +303,7 @@ export default function Home() {
           </section>
         )}
       </main>
-      <Footer />
+      
     </div>
   );
 }
