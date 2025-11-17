@@ -35,7 +35,7 @@ export function FormatSettingsCard({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <Card className="flex flex-col border-border/60">
+    <Card className="flex flex-col border-border/60 h-fit">
       <CardHeader>
         <CardTitle>Format and Token Comparison</CardTitle>
         <CardDescription>Compare the same payload as pretty JSON, minified JSON, YAML, TOON, and TOML.</CardDescription>

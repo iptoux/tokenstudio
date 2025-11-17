@@ -28,7 +28,7 @@ export function InputCard({ input, onInputChange, error, onFileLoad }: InputCard
   };
 
   return (
-    <Card className="flex flex-col border-border/60">
+    <Card className="flex flex-col border-border/60 h-fit">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div>
