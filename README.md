@@ -35,8 +35,8 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/tokentools.git
-cd tokentools
+git clone https://github.com/yourusername/tokenstudio.git
+cd tokenstudio
 
 # Install dependencies
 pnpm install
@@ -93,7 +93,7 @@ pnpm start
 ## 📁 Project Structure
 
 ```
-tokentools/
+tokenstudio/
 ├── app/
 │   ├── api/
 │   │   └── tokenize/        # Tokenization API endpoint
@@ -128,7 +128,7 @@ Compare the same data across five different formats to find the most token-effic
 
 Found a bug or have a feature request? Please open an issue on GitHub:
 
-🔗 **[Create an Issue](https://github.com/yourusername/tokentools/issues/new)**
+🔗 **[Create an Issue](https://github.com/yourusername/tokenstudio/issues/new)**
 
 When reporting bugs, please include:
 - Steps to reproduce

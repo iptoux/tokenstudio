@@ -9,7 +9,7 @@ export function Footer() {
 
   useEffect(() => {
     // Fetch GitHub star count
-    fetch('https://api.github.com/repos/iptoux/tokentools')
+    fetch('https://api.github.com/repos/iptoux/tokenstudio')
       .then(res => res.json())
       .then(data => {
         if (data.stargazers_count !== undefined) {
@@ -46,7 +46,7 @@ export function Footer() {
             </Link>
           </div>
           <Link
-            href="https://github.com/iptoux/tokentools"
+            href="https://github.com/iptoux/tokenstudio"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"

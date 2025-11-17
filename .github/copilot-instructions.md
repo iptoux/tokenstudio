@@ -1,6 +1,6 @@
-# TokenTools - AI Coding Agent Instructions
+# Token Studio - AI Coding Agent Instructions
 
-**TokenTools** is a Next.js 16 application for tokenizing text using the OpenAI GPT tokenizer (cl100k_base). It provides both a web UI and an API endpoint for encoding/decoding text into tokens.
+**Token Studio** is a Next.js 16 application for tokenizing text using the OpenAI GPT tokenizer (cl100k_base). It provides both a web UI and an API endpoint for encoding/decoding text into tokens.
 
 ## Architecture
 
