@@ -2,7 +2,7 @@ import { Copy, Code } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import type { OutputFormat, TokenViewMode } from "@/lib/types";
+import type { TokenViewMode } from "@/lib/types";
 import type { TokenForDisplay } from "@/lib/utils/tokenization";
 import { getTokenIds } from "@/lib/utils/tokenization";
 
