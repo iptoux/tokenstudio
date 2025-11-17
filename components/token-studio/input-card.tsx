@@ -81,7 +81,7 @@ export function InputCard({ input, onInputChange, error, onFileLoad }: InputCard
       <CardContent className="flex flex-1 flex-col gap-3">
         <div className="space-y-2">
           <Label htmlFor="json-input">Payload</Label>
-          <ScrollArea className="h-[400px] rounded-md border">
+          <ScrollArea className="h-[240px] rounded-md border">
             <Textarea
               id="json-input"
               value={input}
