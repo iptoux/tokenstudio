@@ -31,6 +31,7 @@ export default function Home() {
   const [toonKeyFolding] = useState<ToonKeyFolding>('off');
   const [showTokens, setShowTokens] = useState<boolean>(false);
   const [showTokenAware, setShowTokenAware] = useState<boolean>(false);
+  const [showTokenCosts, setShowTokenCosts] = useState<boolean>(false);
   const [tokenizationModel] = useState<TokenizationModel>("cl100k_base");
   const [tokenViewPerTab, setTokenViewPerTab] = useState<TokenViewPerTab>({
     pretty: "text",
@@ -245,6 +246,8 @@ export default function Home() {
             onShowCountsChange={setShowCounts}
             showTokens={showTokens}
             onShowTokensChange={setShowTokens}
+            showTokenCosts={showTokenCosts}
+            onShowTokenCostsChange={setShowTokenCosts}
             onFileLoad={handleFileLoad}
           />
         </section>

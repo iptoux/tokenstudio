@@ -65,7 +65,7 @@ export function InputCard({ input, onInputChange, error, onFileLoad }: InputCard
   };
 
   return (
-    <Card className="flex flex-col border-border/60 h-fit">
+    <Card className="flex flex-col border-border/60 h-fit bg-card/40 dark:bg-card">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div>

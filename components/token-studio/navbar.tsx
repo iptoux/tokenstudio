@@ -36,17 +36,19 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 w-full max-w-6xl mx-auto border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-b-lg">
       <div className="container flex py-4 items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-3">
-          <Image
-            src="/tokenstudio-logo.png"
-            alt="Token Studio Logo"
-            width={80}
-            height={80}
-          />
+          <div className="relative w-10 h-10 md:w-20 md:h-20 transition-all duration-300 ease-in-out motion-reduce:transition-none">
+            <Image
+              src="/tokenstudio-logo.png"
+              alt="Token Studio Logo"
+              fill
+              className="object-contain"
+            />
+          </div>
           <div>
         <div className="flex items-center gap-2">
           <Badge variant="outline">• TOKEN STUDIO</Badge>
         </div>
-        <p className="mt-2 max-w-xl text-xs text-muted-foreground sm:text-sm">
+        <p className="mt-2 max-w-xl text-xs text-muted-foreground sm:text-sm hidden sm:block">
           Paste JSON, explore alternate formats, and see how token counts change for different encodings.
         </p>
       </div>

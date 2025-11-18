@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { EncodingFormat } from "@/lib/types";
 
 type FormatSettingsCardProps = {
@@ -16,6 +17,8 @@ type FormatSettingsCardProps = {
   onShowCountsChange: (value: boolean) => void;
   showTokens: boolean;
   onShowTokensChange: (value: boolean) => void;
+  showTokenCosts: boolean;
+  onShowTokenCostsChange: (value: boolean) => void;
   onFileLoad: (file: File) => void;
 };
 
@@ -30,12 +33,14 @@ export function FormatSettingsCard({
   onShowCountsChange,
   showTokens,
   onShowTokensChange,
+  showTokenCosts,
+  // onShowTokenCostsChange is intentionally not destructured because the "Token costs" feature is not implemented yet
   onFileLoad,
 }: FormatSettingsCardProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <Card className="flex flex-col border-border/60 h-fit">
+    <Card className="flex flex-col border-border/60 bg-card/60 dark:bg-card h-fit">
       <CardHeader>
         <CardTitle>Format and Token Comparison</CardTitle>
         <CardDescription>Compare the same payload as pretty JSON, minified JSON, YAML, TOON, and TOML.</CardDescription>
@@ -71,6 +76,22 @@ export function FormatSettingsCard({
           >
             Show tokens
           </Badge>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge
+                  variant={showTokenCosts ? "default" : "outline"}
+                  className="cursor-not-allowed opacity-60"
+                  aria-disabled={true}
+                >
+                  Token costs
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Not implemented yet</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         {/* Settings */}
